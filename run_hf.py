@@ -1,3 +1,8 @@
+import os
+
+# Matikan Node SSR Proxy Gradio 6 agar trafik '/' dan SSE streaming langsung ditangani FastAPI
+os.environ["GRADIO_SSR_MODE"] = "false"
+
 import gradio as gr
 import gradio.routes
 from fastapi.middleware.cors import CORSMiddleware
@@ -76,4 +81,4 @@ with gr.Blocks(title="VeriAudit AI") as demo:
         ping_btn.click(fn=gpu_health_ping, inputs=ping_input, outputs=ping_output)
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0")
+    demo.launch(server_name="0.0.0.0", ssr_mode=False)
