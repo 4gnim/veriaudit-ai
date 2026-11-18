@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VeriAudit AI — Multimodal Policy & Compliance Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          boxShadow: {
+            macos: '0 24px 60px -15px rgba(15, 23, 42, 0.16), 0 0 1px 1px rgba(15, 23, 42, 0.06)',
+            card: '0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 0 1px 1px rgba(15, 23, 42, 0.04)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #eef2ff 0%, #f8fafc 45%, #f1f5f9 100%);
+    }
+    .json-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .json-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 antialiased p-3 md:p-6">
+
+  <!-- macOS App Window -->
+  <div class="max-w-7xl mx-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-macos border border-slate-200/80 overflow-hidden">
+
+    <!-- macOS Title Bar -->
+    <header class="h-13 px-4 py-3 bg-slate-50/90 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded-full bg-rose-400 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span>
+        </div>
+        <div class="h-4 w-[1px] bg-slate-200 mx-1"></div>
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-sm tracking-tight text-slate-900">VeriAudit AI</span>
+          <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/70">
+            Self-Reflective Multimodal Agent
+          </span>
+        </div>
+      </div>
+
+      <!-- Segmented Navigation Control -->
+      <nav class="flex items-center bg-slate-200/70 p-1 rounded-lg text-xs font-medium">
+        <button id="tab-btn-workspace" onclick="switchTab('workspace')"
+          class="px-3 py-1.5 rounded-md bg-white text-slate-900 shadow-sm transition">
+          Audit Workspace
+        </button>
+        <button id="tab-btn-policies" onclick="switchTab('policies')"
+          class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition">
+          SOP Knowledge Base (<span id="policy-count-badge">12</span>)
+        </button>
+        <button id="tab-btn-arch" onclick="switchTab('arch')"
+          class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition">
+          Architecture & Evals
+        </button>
+      </nav>
+
+      <div class="hidden lg:flex items-center gap-2 text-[11px] text-slate-500 font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>Qdrant Hybrid + LangGraph</span>
+      </div>
+    </header>
+
+    <!-- TAB 1: AUDIT WORKSPACE -->
+    <main id="tab-workspace" class="grid grid-cols-1 lg:grid-cols-12 min-h-[760px]">
+
+      <!-- LEFT PANE: Document Input, Visual Preview & Live Agent Graph -->
+      <section class="lg:col-span-5 border-b lg:border-b-0 lg:border-r border-slate-200/80 p-5 bg-slate-50/40 flex flex-col gap-5">
+
+        <!-- 1-Click Demo Presets -->
+        <div>
+          <div class="flex items-center justify-between mb-2.5">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">1-Click Scenario Presets</h2>
+            <span class="text-[11px] text-slate-400">Tanpa perlu unggah file</span>
+          </div>
+          <div id="presets-container" class="space-y-2">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Custom Upload Box -->
+        <div class="bg-white rounded-xl p-4 shadow-card border border-slate-200/70">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Atau Unggah Dokumen Sendiri</h2>
+            <select id="domain-select" class="text-xs border border-slate-200 rounded-md px-2 py-1 bg-slate-50 text-slate-700 focus:outline-none">
+              <option value="all">Domain: Semua SOP</option>
+              <option value="procurement">Procurement & Invoice</option>
+              <option value="expense">Expense Reimbursement</option>
+              <option value="contract">Vendor Contract & SLA</option>
+            </select>
+          </div>
+
+          <label for="file-input"
+            class="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-lg p-4 cursor-pointer transition bg-slate-50/50 hover:bg-indigo-50/30">
+            <span class="text-xs font-medium text-slate-700" id="file-label">Pilih file PDF, PNG, JPG, atau WEBP (Maks 5 MB)</span>
+            <span class="text-[11px] text-slate-400 mt-0.5">Mendukung dokumen hasil scan & tabel kompleks</span>
+            <input id="file-input" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" class="hidden" onchange="handleFileSelect(event)" />
+          </label>
+
+          <button id="upload-btn" onclick="runUploadAudit()" disabled
+            class="mt-3 w-full py-2 px-4 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition shadow-sm">
+            Jalankan Multimodal Audit
+          </button>
+        </div>
+
+        <!-- Live LangGraph Node Execution Timeline -->
+        <div class="bg-white rounded-xl p-4 shadow-card border border-slate-200/70">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">LangGraph Agent Execution</h2>
+            <span id="run-status-pill" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600">IDLE</span>
+          </div>
+          <div id="node-timeline" class="space-y-2.5 text-xs">
+            <div class="text-slate-400 text-[11px] italic">Pilih salah satu preset di atas atau unggah dokumen untuk melihat eksekusi agen secara real-time.</div>
+          </div>
+        </div>
+
+        <!-- Document Page 1 Preview -->
+        <div id="preview-card" class="hidden bg-white rounded-xl p-4 shadow-card border border-slate-200/70">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Visual Document Input (Page 1)</h2>
+            <span id="preview-meta" class="text-[11px] font-mono text-slate-400"></span>
+          </div>
+          <div class="rounded-lg border border-slate-200 overflow-hidden bg-slate-100 max-h-72 flex justify-center">
+            <img id="preview-img" src="" alt="Document Preview" class="object-contain max-h-72 w-auto" />
+          </div>
+        </div>
+
+      </section>
+
+      <!-- RIGHT PANE: Audit Verdict, SOP Citations & Structured Extraction -->
+      <section class="lg:col-span-7 p-6 flex flex-col gap-5 bg-white">
+
+        <!-- Empty State -->
+        <div id="empty-state" class="my-auto text-center max-w-md mx-auto py-12">
+          <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 font-mono font-bold text-lg border border-indigo-100">
+            VA
+          </div>
+          <h3 class="text-base font-semibold text-slate-900">Siap Mengaudit Dokumen & Kepatuhan SOP</h3>
+          <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+            VeriAudit AI membaca dokumen secara multimodal, mengambil pasal SOP yang relevan menggunakan Hybrid Search (Dense + BM25 RRF) di Qdrant Cloud, lalu memvalidasi putusannya melalui Critic Node.
+          </p>
+        </div>
+
+        <!-- Result Container -->
+        <div id="result-container" class="hidden space-y-5">
+
+          <!-- Verdict Banner -->
+          <div id="verdict-banner" class="rounded-xl p-5 border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span id="verdict-badge" class="text-xs font-bold px-2.5 py-1 rounded-md tracking-wide uppercase"></span>
+                <span id="session-id-label" class="text-[11px] font-mono text-slate-500"></span>
+              </div>
+              <p id="verdict-summary" class="text-sm text-slate-800 font-medium mt-2.5 leading-relaxed"></p>
+            </div>
+            <div class="shrink-0 text-left sm:text-right bg-white/80 px-4 py-2.5 rounded-lg border border-slate-200/70">
+              <div class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Risk Score</div>
+              <div id="risk-score-val" class="text-2xl font-bold font-mono text-slate-900 mt-0.5">0/100</div>
+            </div>
+          </div>
+
+          <!-- Audit Findings -->
+          <div>
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2.5">Audit Findings & Policy Grounding</h3>
+            <div id="findings-list" class="space-y-2.5"></div>
+          </div>
+
+          <!-- Critic Self-Reflection Box -->
+          <div class="rounded-xl bg-slate-50 border border-slate-200/80 p-4">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="text-xs font-semibold text-slate-800">Self-Reflection Critic Verification</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">VERIFIED</span>
+            </div>
+            <p id="critic-notes-text" class="text-xs text-slate-600 leading-relaxed"></p>
+          </div>
+
+          <!-- Sub-tabs: Structured JSON vs Retrieved SOPs -->
+          <div>
+            <div class="flex items-center gap-4 border-b border-slate-200 text-xs font-medium mb-3">
+              <button id="subtab-btn-json" onclick="switchSubTab('json')" class="pb-2 border-b-2 border-indigo-600 text-indigo-600 font-semibold">
+                Extracted Document Schema (Pydantic JSON)
+              </button>
+              <button id="subtab-btn-sops" onclick="switchSubTab('sops')" class="pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800">
+                Retrieved SOP Citations (Qdrant RRF)
+              </button>
+            </div>
+
+            <pre id="subtab-json" class="json-scroll bg-slate-900 text-slate-100 rounded-xl p-4 text-[11.5px] font-mono overflow-x-auto max-h-72 leading-relaxed"></pre>
+            <div id="subtab-sops" class="hidden space-y-2 max-h-72 overflow-y-auto json-scroll"></div>
+          </div>
+
+        </div>
+      </section>
+    </main>
+
+    <!-- TAB 2: SOP KNOWLEDGE BASE -->
+    <section id="tab-policies" class="hidden p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[700px]">
+      <div class="lg:col-span-8 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-900">Indexed SOP Rules in Qdrant Cloud</h2>
+            <p class="text-xs text-slate-500">Vektor Dense (Multilingual MiniLM 384d) + Sparse (BM25) dengan Reciprocal Rank Fusion.</p>
+          </div>
+          <button onclick="resetPolicies()" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium">
+            Reset Default SOP
+          </button>
+        </div>
+        <div id="policies-table" class="space-y-2.5 max-h-[600px] overflow-y-auto json-scroll pr-1"></div>
+      </div>
+
+      <div class="lg:col-span-4">
+        <div class="bg-slate-50 rounded-xl p-5 border border-slate-200/80 space-y-3.5">
+          <h3 class="text-sm font-semibold text-slate-900">Tambah Aturan SOP Baru (Live Indexing)</h3>
+          <p class="text-xs text-slate-500">Uji kemampuan Dynamic RAG: tambahkan aturan baru di sini lalu jalankan ulang audit dokumen.</p>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Kode Aturan (Rule Code)</label>
+            <input id="new-rule-code" type="text" placeholder="Contoh: PROC-005" class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Kategori Domain</label>
+            <select id="new-rule-cat" class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white">
+              <option value="procurement">procurement</option>
+              <option value="expense">expense</option>
+              <option value="contract">contract</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Judul Pasal / Bagian</label>
+            <input id="new-rule-section" type="text" placeholder="Contoh: Larangan Vendor Terafiliasi" class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Isi Kebijakan SOP</label>
+            <textarea id="new-rule-content" rows="4" placeholder="Tuliskan aturan spesifik beserta angka batasannya..." class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white"></textarea>
+          </div>
+          <button onclick="submitNewPolicy()" class="w-full py-2 px-4 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition">
+            Indeks ke Qdrant Cloud
+          </button>
+          <p id="policy-form-msg" class="text-xs text-emerald-600 hidden"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: ARCHITECTURE & EVALS -->
+    <section id="tab-arch" class="hidden p-6 space-y-6 min-h-[700px]">
+    <!-- Live Evaluation Metrics Banner -->
+    <div id="eval-metrics-box" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50">
+        <div class="text-[11px] font-mono text-emerald-700 font-semibold">VERDICT ACCURACY</div>
+        <div id="eval-acc" class="text-2xl font-bold font-mono text-slate-900 mt-1">100.0%</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">Golden Dataset (5 Cases)</div>
+    </div>
+    <div class="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50">
+        <div class="text-[11px] font-mono text-indigo-700 font-semibold">HYBRID RETRIEVAL RECALL</div>
+        <div id="eval-recall" class="text-2xl font-bold font-mono text-slate-900 mt-1">100.0%</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">Dense + BM25 RRF @5</div>
+    </div>
+    <div class="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50">
+        <div class="text-[11px] font-mono text-indigo-700 font-semibold">CITATION GROUNDING</div>
+        <div id="eval-ground" class="text-2xl font-bold font-mono text-slate-900 mt-1">100.0%</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">Zero Hallucinated Rule Codes</div>
+    </div>
+    <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
+        <div class="text-[11px] font-mono text-slate-600 font-semibold">MEDIAN E2E LATENCY</div>
+        <div id="eval-lat" class="text-2xl font-bold font-mono text-slate-900 mt-1">14.4s</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">Multi-Node LangGraph</div>
+    </div>
+    </div>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70">
+          <div class="text-[11px] font-mono text-indigo-600 font-semibold">NODE 1 • MULTIMODAL</div>
+          <div class="text-sm font-semibold text-slate-900 mt-1">Document Extractor</div>
+          <p class="text-xs text-slate-600 mt-1">PyMuPDF rendering + Gemini Vision cascade dengan validasi Pydantic strict JSON.</p>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70">
+          <div class="text-[11px] font-mono text-indigo-600 font-semibold">NODE 2 • HYBRID RAG</div>
+          <div class="text-sm font-semibold text-slate-900 mt-1">Qdrant RRF Retriever</div>
+          <p class="text-xs text-slate-600 mt-1">Menggabungkan Dense Multilingual Embedding + Sparse BM25 untuk akurasi kode & nominal.</p>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70">
+          <div class="text-[11px] font-mono text-indigo-600 font-semibold">NODE 3 • REASONING</div>
+          <div class="text-sm font-semibold text-slate-900 mt-1">Compliance Auditor</div>
+          <p class="text-xs text-slate-600 mt-1">Groq gpt-oss-120b mengevaluasi kalkulasi pajak, plafon biaya, dan kelengkapan otorisasi.</p>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70">
+          <div class="text-[11px] font-mono text-indigo-600 font-semibold">NODE 4 • REFLECTION</div>
+          <div class="text-sm font-semibold text-slate-900 mt-1">Deterministic & LLM Critic</div>
+          <p class="text-xs text-slate-600 mt-1">Mencegah halusinasi sitasi rule_code dan memicu re-retrieval otomatis jika ada aturan terlewat.</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-50 rounded-xl p-5 border border-slate-200/80">
+        <h3 class="text-sm font-semibold text-slate-900 mb-2">Production Guardrails & Observability</h3>
+        <ul class="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+          <li><strong>Multi-Provider Resilience:</strong> Otomatis melakukan failover lintas model Gemini dan Groq saat terjadi kuota limit atau timeout.</li>
+          <li><strong>Citation Grounding Check:</strong> Verifikasi deterministik memastikan setiap <code>rule_code</code> pada putusan benar-benar berasal dari hasil retrieval Qdrant.</li>
+          <li><strong>Langfuse Telemetry:</strong> Setiap eksekusi agen tercatat latensi, token, dan jejak pemanggilannya di Langfuse Cloud.</li>
+          <li><strong>API Rate Limiting:</strong> Proteksi SlowAPI per alamat IP dan pembatasan ukuran file maksimal 5 MB.</li>
+        </ul>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    let selectedFile = null;
+
+    function switchTab(tab) {
+      ['workspace', 'policies', 'arch'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tab) {
+          btn.classList.add('bg-white', 'text-slate-900', 'shadow-sm');
+          btn.classList.remove('text-slate-600');
+        } else {
+          btn.classList.remove('bg-white', 'text-slate-900', 'shadow-sm');
+          btn.classList.add('text-slate-600');
+        }
+      });
+      if (tab === 'policies') loadPolicies();
+    }
+
+    function switchSubTab(sub) {
+      const isJson = sub === 'json';
+      document.getElementById('subtab-json').classList.toggle('hidden', !isJson);
+      document.getElementById('subtab-sops').classList.toggle('hidden', isJson);
+
+      document.getElementById('subtab-btn-json').className = isJson
+        ? 'pb-2 border-b-2 border-indigo-600 text-indigo-600 font-semibold'
+        : 'pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800';
+      document.getElementById('subtab-btn-sops').className = !isJson
+        ? 'pb-2 border-b-2 border-indigo-600 text-indigo-600 font-semibold'
+        : 'pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800';
+    }
+
+    async function loadPresets() {
+      const res = await fetch('/api/presets');
+      const data = await res.json();
+      const container = document.getElementById('presets-container');
+      container.innerHTML = data.presets.map(p => `
+        <button onclick="runPresetAudit('${p.id}')"
+          class="w-full text-left bg-white hover:bg-indigo-50/40 border border-slate-200/80 hover:border-indigo-300 rounded-xl p-3.5 shadow-card transition group">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-semibold text-slate-900 group-hover:text-indigo-700">${p.title}</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">${p.badge}</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1 leading-snug">${p.description}</p>
+        </button>
+      `).join('');
+    }
+
+    function handleFileSelect(event) {
+      selectedFile = event.target.files[0] || null;
+      const label = document.getElementById('file-label');
+      const btn = document.getElementById('upload-btn');
+      if (selectedFile) {
+        label.textContent = `${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB)`;
+        btn.disabled = false;
+      } else {
+        label.textContent = 'Pilih file PDF, PNG, JPG, atau WEBP (Maks 5 MB)';
+        btn.disabled = true;
+      }
+    }
+
+    function resetExecutionUI() {
+      document.getElementById('empty-state').classList.add('hidden');
+      document.getElementById('result-container').classList.add('hidden');
+      const statusPill = document.getElementById('run-status-pill');
+      statusPill.textContent = 'RUNNING...';
+      statusPill.className = 'text-[11px] font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-800 animate-pulse';
+
+      document.getElementById('node-timeline').innerHTML = `
+        <div class="flex items-center gap-2 text-indigo-600 font-medium">
+          <span class="w-2 h-2 rounded-full bg-indigo-600 animate-ping"></span>
+          <span>Memulai pipeline dokumen & agent graph...</span>
+        </div>
+      `;
+    }
+
+    function appendNodeStep(trace) {
+      const timeline = document.getElementById('node-timeline');
+      if (timeline.querySelector('.animate-ping')) {
+        timeline.innerHTML = '';
+      }
+      const badgeColor = trace.status === 'retry_triggered'
+        ? 'bg-amber-100 text-amber-800'
+        : 'bg-emerald-100 text-emerald-800';
+
+      const stepEl = document.createElement('div');
+      stepEl.className = 'p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/70';
+      stepEl.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="font-mono font-semibold text-slate-800">${trace.node}</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${badgeColor}">${trace.status}</span>
+            <span class="text-[10px] font-mono text-slate-400">${trace.latency_ms} ms</span>
+          </div>
+        </div>
+        <div class="text-[11px] text-slate-600 mt-1">${trace.detail}</div>
+      `;
+      timeline.appendChild(stepEl);
+    }
+
+    function renderFinalAudit(payload) {
+      const statusPill = document.getElementById('run-status-pill');
+      statusPill.textContent = 'COMPLETED';
+      statusPill.className = 'text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800';
+
+      const verdict = payload.final_verdict;
+      const banner = document.getElementById('verdict-banner');
+      const badge = document.getElementById('verdict-badge');
+
+      if (verdict.overall_status === 'APPROVED') {
+        banner.className = 'rounded-xl p-5 border border-emerald-200 bg-emerald-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4';
+        badge.className = 'text-xs font-bold px-2.5 py-1 rounded-md tracking-wide uppercase bg-emerald-600 text-white';
+      } else if (verdict.overall_status === 'REJECTED') {
+        banner.className = 'rounded-xl p-5 border border-rose-200 bg-rose-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4';
+        badge.className = 'text-xs font-bold px-2.5 py-1 rounded-md tracking-wide uppercase bg-rose-600 text-white';
+      } else {
+        banner.className = 'rounded-xl p-5 border border-amber-200 bg-amber-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4';
+        badge.className = 'text-xs font-bold px-2.5 py-1 rounded-md tracking-wide uppercase bg-amber-600 text-white';
+      }
+
+      badge.textContent = verdict.overall_status;
+      document.getElementById('session-id-label').textContent = `Session: ${payload.session_id}`;
+      document.getElementById('verdict-summary').textContent = verdict.summary;
+      document.getElementById('risk-score-val').textContent = `${verdict.risk_score}/100`;
+      document.getElementById('critic-notes-text').textContent = verdict.critic_notes;
+
+      const findingsList = document.getElementById('findings-list');
+      findingsList.innerHTML = verdict.findings.map(f => {
+        const pill = f.status === 'COMPLIANT'
+          ? 'bg-emerald-100 text-emerald-800'
+          : f.status === 'VIOLATION'
+            ? 'bg-rose-100 text-rose-800'
+            : 'bg-amber-100 text-amber-800';
+        return `
+          <div class="p-3.5 rounded-xl border border-slate-200/80 bg-white shadow-card">
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-xs font-bold text-indigo-700">${f.rule_code}</span>
+              <span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded ${pill}">${f.status}</span>
+            </div>
+            <p class="text-xs text-slate-700 mt-1.5 leading-relaxed">${f.reason}</p>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('subtab-json').textContent = JSON.stringify(payload.extracted_data, null, 2);
+      document.getElementById('subtab-sops').innerHTML = payload.retrieved_policies.map(p => `
+        <div class="p-3 rounded-lg border border-slate-200 bg-slate-50 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-semibold text-slate-900">[${p.rule_code}] ${p.section}</span>
+            <span class="font-mono text-[10px] text-indigo-600">RRF Score: ${p.relevance_score}</span>
+          </div>
+          <p class="text-slate-600 mt-1">${p.content}</p>
+        </div>
+      `).join('');
+
+      document.getElementById('result-container').classList.remove('hidden');
+    }
+
+    async function consumeSSE(response) {
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: 'Terjadi kesalahan server' }));
+        alert(err.detail || 'Gagal memproses dokumen');
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let currentEvent = 'message';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const rawLine of lines) {
+          const line = rawLine.trim();
+          if (line.startsWith('event:')) {
+            currentEvent = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            const dataStr = line.slice(5).trim();
+            if (!dataStr) continue;
+            const data = JSON.parse(dataStr);
+
+            if (currentEvent === 'parsed' && data.preview_image_b64) {
+              document.getElementById('preview-card').classList.remove('hidden');
+              document.getElementById('preview-meta').textContent = `${data.filename} (${data.page_count} hal)`;
+              document.getElementById('preview-img').src = `data:image/jpeg;base64,${data.preview_image_b64}`;
+            } else if (currentEvent === 'node_update') {
+              appendNodeStep(data.trace);
+            } else if (currentEvent === 'final_result') {
+              renderFinalAudit(data);
+            } else if (currentEvent === 'error') {
+              alert('Agent Error: ' + data.message);
+            }
+          }
+        }
+      }
+    }
+
+    async function runPresetAudit(presetId) {
+      resetExecutionUI();
+      const res = await fetch(`/api/audit/preset/${presetId}/stream`, { method: 'POST' });
+      await consumeSSE(res);
+    }
+
+    async function runUploadAudit() {
+      if (!selectedFile) return;
+      resetExecutionUI();
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('policy_domain', document.getElementById('domain-select').value);
+
+      const res = await fetch('/api/audit/upload/stream', {
+        method: 'POST',
+        body: formData,
+      });
+      await consumeSSE(res);
+    }
+
+    async function loadPolicies() {
+      const res = await fetch('/api/policies');
+      const data = await res.json();
+      document.getElementById('policy-count-badge').textContent = data.total;
+      document.getElementById('policies-table').innerHTML = data.policies.map(p => `
+        <div class="p-3.5 rounded-xl border border-slate-200 bg-white shadow-card">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs font-bold text-indigo-700">${p.rule_code}</span>
+              <span class="text-xs font-semibold text-slate-900">${p.section}</span>
+            </div>
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">${p.category}</span>
+          </div>
+          <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">${p.content}</p>
+        </div>
+      `).join('');
+    }
+
+    async function submitNewPolicy() {
+      const payload = {
+        rule_code: document.getElementById('new-rule-code').value.trim(),
+        category: document.getElementById('new-rule-cat').value,
+        section: document.getElementById('new-rule-section').value.trim(),
+        content: document.getElementById('new-rule-content').value.trim(),
+      };
+      const res = await fetch('/api/policies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const msg = document.getElementById('policy-form-msg');
+        msg.textContent = `Aturan ${payload.rule_code} berhasil diindeks ke Qdrant Cloud!`;
+        msg.classList.remove('hidden');
+        loadPolicies();
+      } else {
+        alert('Pastikan seluruh field diisi sesuai panjang minimal.');
+      }
+    }
+
+    async function resetPolicies() {
+      await fetch('/api/policies/reset', { method: 'POST' });
+      loadPolicies();
+    }
+
+    async function loadEvals() {
+      const res = await fetch('/api/evals');
+      const data = await res.json();
+      if (!data.available) return;
+      document.getElementById('eval-acc').textContent = `${data.verdict_accuracy_pct}%`;
+      document.getElementById('eval-recall').textContent = `${data.avg_retrieval_recall_pct}%`;
+      document.getElementById('eval-ground').textContent = `${data.citation_grounding_pct}%`;
+      document.getElementById('eval-lat').textContent = `${(data.median_latency_ms / 1000).toFixed(1)}s`;
+    }
+
+    loadEvals();
+    loadPresets();
+    loadPolicies();
+  </script>
+</body>
+</html>

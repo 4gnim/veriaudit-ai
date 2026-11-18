@@ -1,0 +1,55 @@
+{
+  "evaluated_at": "2026-11-18T14:29:03.914069+00:00",
+  "total_cases": 5,
+  "verdict_accuracy_pct": 100.0,
+  "avg_retrieval_recall_pct": 100.0,
+  "citation_grounding_pct": 100.0,
+  "median_latency_ms": 14406.7,
+  "cases": [
+    {
+      "case_id": "EVAL-01",
+      "name": "Procurement Invoice Tanpa PO & Salah PPN",
+      "expected_status": "REJECTED",
+      "actual_status": "REJECTED",
+      "verdict_match": true,
+      "retrieval_recall": 1.0,
+      "latency_ms": 11902.4
+    },
+    {
+      "case_id": "EVAL-02",
+      "name": "Klaim Makan Dinas Sesuai Plafon",
+      "expected_status": "APPROVED",
+      "actual_status": "APPROVED",
+      "verdict_match": true,
+      "retrieval_recall": 1.0,
+      "latency_ms": 16395.9
+    },
+    {
+      "case_id": "EVAL-03",
+      "name": "Klaim Makan Dinas Mengandung Item Terlarang",
+      "expected_status": "REJECTED",
+      "actual_status": "REJECTED",
+      "verdict_match": true,
+      "retrieval_recall": 1.0,
+      "latency_ms": 18608.2
+    },
+    {
+      "case_id": "EVAL-04",
+      "name": "Kontrak Vendor Akses Database Tanpa NDA",
+      "expected_status": "REJECTED",
+      "actual_status": "REJECTED",
+      "verdict_match": true,
+      "retrieval_recall": 1.0,
+      "latency_ms": 9340.1
+    },
+    {
+      "case_id": "EVAL-05",
+      "name": "Out-of-Scope Document (Abstention Check)",
+      "expected_status": "NEEDS_HUMAN_REVIEW",
+      "actual_status": "NEEDS_HUMAN_REVIEW",
+      "verdict_match": true,
+      "retrieval_recall": 1.0,
+      "latency_ms": 14406.7
+    }
+  ]
+}
