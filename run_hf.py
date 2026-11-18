@@ -2,6 +2,8 @@ import os
 
 # Matikan Node SSR Proxy Gradio 6 agar trafik '/' dan SSE streaming langsung ditangani FastAPI
 os.environ["GRADIO_SSR_MODE"] = "false"
+os.environ["NO_PROXY"] = "localhost,127.0.0.1,0.0.0.0"
+os.environ["no_proxy"] = "localhost,127.0.0.1,0.0.0.0"
 
 import gradio as gr
 import gradio.routes
@@ -63,7 +65,8 @@ def _custom_create_app(blocks, *args, **kwargs):
             "/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static"
         )
 
-    @gradio_app.get("/", include_in_schema=False)
+    # Dukung GET dan HEAD agar healthcheck Gradio (url_ok) selalu menerima HTTP 200
+    @gradio_app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
     def serve_frontend():
         return FileResponse(FRONTEND_DIR / "index.html")
 
