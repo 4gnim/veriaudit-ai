@@ -1,14 +1,14 @@
 # Web Framework & Streaming
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-python-multipart==0.0.20
-sse-starlette==2.2.1
-slowapi==0.1.9
+fastapi>=0.115.6
+uvicorn[standard]>=0.34.0
+python-multipart>=0.0.20
+sse-starlette>=2.2.1
+slowapi>=0.1.9
 
 # Validation & Config
-pydantic==2.10.4
-pydantic-settings==2.7.1
-python-dotenv==1.0.1
+pydantic>=2.10.4
+pydantic-settings>=2.7.1
+python-dotenv>=1.0.1
 
 # LLM & Agent Orchestration
 langgraph==0.2.62
@@ -21,11 +21,9 @@ langchain-groq==0.2.3
 qdrant-client==1.12.2
 fastembed==0.5.1
 pymupdf==1.25.1
-pillow==10.4.0
+pillow>=10.4.0
 
 # Observability & Testing
 langfuse==2.57.10
 pytest==8.3.4
-httpx==0.28.1
-
-gradio>=5.0.0
+httpx>=0.28.1
