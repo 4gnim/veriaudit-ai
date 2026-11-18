@@ -2,7 +2,7 @@
 title: VeriAudit AI
 emoji: 🛡️
 colorFrom: indigo
-colorTo: slate
+colorTo: gray
 sdk: gradio
 app_file: run_hf.py
 pinned: false
