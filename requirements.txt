@@ -19,7 +19,7 @@ langchain-groq==0.2.3
 
 # Hybrid Vector Search & Document Parsing
 qdrant-client==1.12.2
-fastembed==0.5.1
+fastembed>=0.5.1
 pymupdf==1.25.1
 pillow>=10.4.0
 
