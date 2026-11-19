@@ -8,6 +8,8 @@ os.environ["no_proxy"] = "localhost,127.0.0.1,0.0.0.0"
 import gradio as gr
 import gradio.routes
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
@@ -37,7 +39,7 @@ info = store.client.get_collection(store.collection_name)
 if (info.points_count or 0) == 0:
     seed_default_policies()
 
-# Sisipkan FastAPI routes & Split-Pane UI ke dalam FastAPI internal milik Gradio
+# Sisipkan FastAPI routes, Swagger Docs & Split-Pane UI ke dalam FastAPI internal milik Gradio
 _orig_create_app = gradio.routes.App.create_app
 
 
@@ -69,6 +71,30 @@ def _custom_create_app(blocks, *args, **kwargs):
     @gradio_app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
     def serve_frontend():
         return FileResponse(FRONTEND_DIR / "index.html")
+
+    # Aktifkan kembali OpenAPI Schema & Swagger UI (/docs) khusus endpoint /api/*
+    @gradio_app.get("/openapi.json", include_in_schema=False)
+    def custom_openapi():
+        if gradio_app.openapi_schema:
+            return gradio_app.openapi_schema
+        api_routes = [
+            r for r in gradio_app.routes if getattr(r, "path", "").startswith("/api")
+        ]
+        openapi_schema = get_openapi(
+            title="VeriAudit AI — Multimodal Policy Compliance API",
+            version="1.0.0",
+            description="REST & SSE Streaming API untuk ekstraksi dokumen multimodal, Hybrid RAG (Qdrant), dan audit kepatuhan SOP berbasis LangGraph.",
+            routes=api_routes,
+        )
+        gradio_app.openapi_schema = openapi_schema
+        return openapi_schema
+
+    @gradio_app.get("/docs", include_in_schema=False)
+    def custom_swagger_ui():
+        return get_swagger_ui_html(
+            openapi_url="/openapi.json",
+            title="VeriAudit AI — Swagger API Docs",
+        )
 
     return gradio_app
 
